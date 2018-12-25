@@ -1,25 +1,25 @@
-﻿{{
+{{
 ''************************************************************************************
 ''*  Title:                                                                          *
 ''*  DeathStarDriver.spin                                                            *
 ''*  Death Star program operation starts from the Main function in this file.        *
-''*  Author: Blaze Sanders [blaze.d.a.sanders@gmail.com] 20                          *
+''*  Author: Blaze Sanders [deathstarinspace@gmail.com]                              *
 ''*  See end of file for terms of use.                                               *
 ''************************************************************************************
 ''*  Brief Description:                                                              *
-''*  Number of cogs/CPU's used: ?6? out of 8                                         *
+''*  Number of cogs/CPU's used: ???6??? out of 8                                     *
 ''*                                                                                  *   
 ''*  This code controls the open source hardware of the Death Star is Space project  *
 ''*  creating a high level API for the control of the following pieces of hardware:  *
 ''*  1) One CMU5 Camera - VGA resolution (640x480) at 13 fps (2 COGS)                *    
-''*  2) One WSLD-650-180m-1 laser diodes - 650 nm, 180 mW and upto 2.5 Gbps        *
-''*  3) Three NSS Magnetorquer Rods - Magnetic moment of 0.2 Am^2                    *
-''*  4) One ESP-12 wireless transceiver - 2.4 GHz @ distances up to ?300? meters     *
-''*  5) Thirty solar panels for recharging @ ?? V and ?? mA & laser detection sensor *
-''*  6) One IMU - 9 axis, 850 Hz with quaternion-based QCOMP AHRS                    *
+''*  2) One WSLD-650-180m-1 laser diodes - 650 nm, 180 mW and upto 2.5 Gbps          *
+''*  3) Three NCTR-M002 Magnetorquer Rods - Magnetic moment> 0.2 Am^2 at 200mW & 5V  *
+''*  4) One ESP-12S wireless transceiver - 2.4 GHz @ distances up to ?300? meters    *
+''*  5) Thirty solar panels - Recharging at 9V and 2500 mA & laser detection sensor  *
+''*  6) One YEI 3-Space IMU - 9 axis, 850 Hz with quaternion-based QCOMP AHRS        *
 ''*  7) One EMIC2 - Text to voice conversion with custom and 9 static voices types   *                                                             
 ''*                                                                                  *
-''*  Deaath Star Max Power Draw: 5 V @ ?220? mA  = ?1.1 W?                           *
+''*  Death Star Max Power Draw: 5 Volts @ 4000 mA  = 20 Watts                        *
 ''*                                                                                  *                                                 
 ''*  The Death Star plans, datasheets, and circuit diagram can be found at:          *
 ''*  www.deathstarinspace.com/engneering                                             *                                        
@@ -27,7 +27,7 @@
 ''*  Revisions:                                                                      *
 ''*  - Mark I  (March 15, 2015): Initial release                                     *
 ''*  - Mark II (August 1, 2016): Documentation update and questions marks added      *
-''*  - Mark III (November ?, 2018): Implemented all 2018 MDR code requirements       * 
+''*  - Mark III (November 12, 2018): Implemented all 2018 MDR code requirements      * 
 ''************************************************************************************                                                        
 }}
 VAR 'Global variables  
@@ -48,7 +48,7 @@ byte targetDestoryed
 'Array variable with three axis direction to target
 byte targetPostion[3]
 
-'Array variable with three axis lock status of target  
+'Boolean three axis target lock status   
 byte targetLocked[3]
 
 'Temporary memory, to hold operational data such as call stacks, parameters and intermediate expression results.
@@ -56,6 +56,7 @@ byte targetLocked[3]
 long EMIC2_StackPointer[100]
 long IMU_StackPointer[100]
 long LASER_StackPointer[100]
+long STEM_CodeStackPointer[100]
 
 CON 'Global Constants
 
@@ -69,21 +70,26 @@ LOW = 0
 
 OUTPUT = 1
 INPUT = 0
- 
-'----Propeller pin configuration for Death Star Mark I----
+
+MECO_ALTITUDE := 100_000 'Main Engine Cut Off in meters
+
+'----Propeller pin configuration for Death Star Mark III----
 
 '--I2C bus pins--
 I2C_SCL = 28
 I2C_SDA = 29
 
+
 '--Laser hardware pins and constants--
 FULL_POWER = 100
 HALF_POWER = 50
 
-'--Reaction Wheel hardware pins and constants--
+
+'--Magnetorquer rod hardware pins and constants--
 NEGATIVE = -1
 POSITIVE = 1
-TARGETING_SLACK = 4 ???
+TARGETING_SLACK = 4
+
 
 '--CMU Camera hardware pins and constants--
 CAMERA_RX_PIN = 8
@@ -107,7 +113,8 @@ EMIC_TX        = 0             ' Serial output (connects to Emic 2 SIN)
 EMIC_RX        = 1             ' Serial input (connects to Emic 2 SOUT)
 VOICE_BAUD_RATE = 9600         ' 9600 bits per second (BPS)
 
-'--Program debugging pins and constants--x`
+
+'--Program debugging pins and constants--
 SURFACE_SERIAL_BUS = 31   'Only usable as GPIO when Prop Plug is NOT plugged in  
 DEBUG_OUTPUT_PIN = 31     'Only usable as GPIO when Prop Plug is NOT plugged in
 DEBUG_INPUT_PIN = 30      'Only usable as GPIO when Prop Plug is NOT plugged in
@@ -118,103 +125,81 @@ CR = 13 'CARRIAGE_RETURN - Move cursor down one line and to the beginning of lin
 
 OBJ 'Additional files you would like imported / included   
 
-'Used to output debugging statments to the Serial Terminal
-'Custom PSP file updating http://obex.parallax.com/object/521 
-DEBUG            : "GDB-SerialMirror"
-
-'Used to perform color detection, motion detection, and color classification 
-TRACKING_CAMERA  : "CMUCamera2"
-
-'Used to generate Darth Vader like audio output from text strings
-TEXT_TO_VOICE    : "EMIC2"
-
 'Used to control CPU clock timing functions
 'Source URL - http://obex.parallax.com/object/173
-TIMING           : "Clock"
+TIMING                  : "Clock"
+
+'Used to output debugging statments to the Serial Terminal
+'Custom PSP file updating http://obex.parallax.com/object/521 
+DEBUG                   : "GDB-SerialMirror"
+
+'Used to control the RGB LED color, frequency and ON duration
+LED                     : "TriColorLED"
 
 'Used to control the current and thus power flowing through a WSLD-650-180m-1 laser diodes
-'LASER            : "WSLD-650-180m-1"
+LASER                   : "WSLD-650-180m-1"
 
-'Used to control the current and thus magnnetic field around NSS Magnetorquer Rods 
-'ATTITUDE_CONTROL : "NSS-Mag-Rod"
+'Used to allow student code to run separate from main processing thread
+STEM                    : "STEM-Code"
+
+'Used to collect temperature & pressure data and calculate altitude above Mean Sea Level 
+ALTIMETER               : "MPL3115A2"
 
 'Used to collect 9-axis (triaxial gyroscope, accelerometer, and compass sensors) data 
-'IMU              : "YEI-3Space"
+IMU                     : "YEI-3Space"
 
-'Used to stream video and images between Earth dish and LEO (distance greater then 100 km)
-'WIRELESS_SBAND   : "n2420"
+'Used to stream video and images between two objects (distance less than ?300? meters)
+WIRELESS_MESH_NETWORK   : "ESP-12E"
 
-'Used to stream video and images between two objects in LEO (distance less than 100 meters)
-'WIRELESS_MESHNET : "ESP12E"
+''*  FUTURE WORK FOR MARK IV DEATH STAR
+''***********************************************************************************************
+''*  'Used to generate Darth Vader like audio output from text strings
+''*  'TEXT_TO_VOICE           : "EMIC2"
+''*
+''*  'Used to control the current and thus magnnetic field around NSS Magnetorquer Rods 
+''*  'ATTITUDE_CONTROL       : "NCTR-M002-Mag-Rod"
+''*
+''*  'Used to perform color detection, motion detection, and color classification 
+''*  'CV_CAMERA               : "CMUCamera2"
+''*
+''*  'Used to stream video and images between Earth dish and LEO (distance greater then 100 km)
+''*  'WIRELESS_SBAND         : "n2420"
+''***********************************************************************************************
 
+PUB Main | word currentAltitude, byte currentAcceleration 
 
-PUB Main | axis 'First method called, like in JAVA
-
-''     Action: Controls the Death Star  
+''     Action: Initialize all Death Star hardware and put system into low power mode  
 '' Parameters: None                                 
-''    Results: Prepares the Death Star for laser firing action                   
+''    Results: Puts CPU into low power mode until rocket launch                  
 ''+Reads/Uses: EVERYTHING                                               
 ''    +Writes: EVERYTHING
-'' Local Vars: None                                  
+'' Local Vars: currentAltitude, currentAcceleration 
+''Local Const: LAUNCH_ACCELERATION                                 
 ''      Calls: EVERYTHING
-''        URL: http://www.solarsystemexpress.com/death-star-in-leo.html
+''        URL: https://www.deathstarinspace.com
 
-TIMING.Init(_xinfreq)
-TIMING.PauseSec(2)
+byte LAUNCH_ACCELERATION := 3 'G's = 29.43 m/s^2
 
-TEXT_TO_VOICE.Initialize(TEXT_TO_VOICE#DARTH_VADER, EMIC_RX, EMIC_TX, DEBUG_BAUD_RATE, VOICE_BAUD_RATE, TEXT_TO_VOICE#ESPON)
-TEXT_TO_VOICE.SpeekStoredQuote(4)
-
-{{
 InitializeDeathStar
 
-Stop
-cog := cognew(IMU.StartIMU, @IMUStackPointer)+1
+currentAltitude := ALTIMETER.GetAltitude
 
-TEXT_TO_VOICE.SpeekStoredQuote(VADER_FATHER_QUOTE)
+'32 bit integer in units of meters
+if(currentAltitude > MECO_ALTITUDE)
+if(currentAcceleration > LAUNCH_ACCELERATION)
 
-targetDestoryed := false
+cog := cognew(IMU.StartIMU, @IMU_StackPointer)+1
+cog := cognew(LASER.Start, @LASER_StackPointer)+1
+cog := cognew(STEM.Start, @STEM_CodeStackPointer)+1
 
-repeat until targetDestoryed
-  TRACKING_CAMERA.GetInputs                           'Get Input Values from Cameras Inputs
-  'targetPostion[0] :=                                'X axis
-  'targetPostion[1] :=                                'Y axis
-  'targetPostion[2] :=                                'Z axis
+'TODO: ADD CONTROL LOOP HERE!!!
 
-  repeat axis from 0 to 2 '3 axes
-    if(targetPostion[axis] < 0 AND targetPostion[0] < (-1*TARGETING_SLACK))
-      REACTION_WHEEL.Rotate(axis, NEGATIVE)
-    elseif(targetPostion[0] > 0 AND targetPostion[0] > TARGETING_SLACK)
-      REACTION_WHEEL.Rotate(axis, POSITIVE)
-    else
-      targetLocked[axis] := true
-      
-      if(targetLocked[0] == true AND DEBUG#DEBUG_STATE)
-        DEBUG.SendText(STRING("X-axis ready to fire", DEBUG#CR))
-      elseif(targetLocked[1] == true AND DEBUG#DEBUG_STATE)
-        DEBUG.SendText(STRING("Y-axis ready to fire", DEBUG#CR))
-      elseif(targetLocked[2] == true AND DEBUG#DEBUG_STATE)
-        DEBUG.SendText(STRING("Z-axis ready to fire", DEBUG#CR))        
 
-    if(targetLocked[0] := true AND targetLocked[1] := true AND targetLocked[2] := true)
-      LASER.Fire(FULL_POWER, 2)
-      targetDestoryed := true
-       
-if(DEBUG#DEBUG_STATE)
-  DEBUG.SendText(STRING("Laser fired! Planet Alderaan was destoryed :(", DEBUG#CR))
-  TEXT_TO_VOICE.SpeekStoredQuote(VADER_DARK_SIDE_QUOTE) 
-
-TIMING.PauseSec(30)
+TIMING.PauseSec(10)
 DEBUG.SendText(STRING("System Rebooting...", DEBUG#CR))
 TIMING.PauseSec(2)
 
 reboot  
-
-{{
-TEXT_TO_VOICE.Initialize(TEXT_TO_VOICE#DARTH_VADER, EMIC_RX, EMIC_TX, DEBUG_BAUD_RATE, VOICE_BAUD_RATE)
-TEXT_TO_VOICE.SpeekStoredQuote(VADER_FAITH_QUOTE)
-}}
-
 
 PUB Stop                                                'Stop the cogs
   if cog
@@ -225,21 +210,123 @@ PRI InitializeDeathStar | OK 'Initializes all the Death Star hardware and firmwa
 
 ''     Action: Initializes all the Death Star hardware and firmware  
 '' Parameters: None                                 
-''    Results: Prepares the Death Star for planet destruction                  
-''+Reads/Uses: From Global Constants an Global Variables  ???                                              
+''    Results: Prepares the Death Star for planet scale destruction                  
+''+Reads/Uses:  Global constants and variables in this DeathStarDriver.spin file                                             
 ''    +Writes: A lot of variables in the ".Initialize" functions
 '' Local Vars: OK - Variable to check if initialization has gone good.                                  
 ''      Calls: All ".Initialize" functions for hardware subsytems
+''        URL: https://www.deathstarinspace.com/engineering
+
+TIMING.Init(_xinfreq)  'External cyrstal on Mark III hardware in 5 MHz, define that in software
+TIMING.SetMode(RCSLOW) 'Set clock to ~20 KHz to reduce power draw at boot up to ???? mA
+TIMING.PauseSec(2)     'Give software and hardware to stablize on new RCSLOW clock speed
+
+if(DEBUG#DEBUG_STATE)
+  DEBUG.start(DEBUG_OUTPUT_PIN, DEBUG_INPUT_PIN, 0, DEBUG_BAUD_RATE)
+  TIMING.PauseSec(1) 'Give software terminal and hardware pins time to stablize their connection
+  DEBUG.SendText(STRING("Debug statement terminal outputs are enabled.", DEBUG#CR))
+else
+ DEBUG.SendText(STRING("Debug statement terminal outputs are disabled.", DEBUG#CR))
+
+DEBUG.SendText(STRING("Update *DEBUG_STATE* global variable in GDB-SerialMirror.spin to toggle bevahior.", DEBUG#CR))
+   
+ALTIMETER.Initialize
+IMU.Initialize
+WIRELESS_MESH_NETWORK.Initialize
+''TEXT_TO_VOICE.Initialize(TEXT_TO_VOICE#DARTH_VADER, EMIC_RX, EMIC_TX, DEBUG_BAUD_RATE, VOICE_BAUD_RATE, TEXT_TO_VOICE#ESPON)  
+
+
+PRI Reset  'Reset all the Death Star hardware  
+
+''     Action: Resets all the Death Star hardware and firmware  
+'' Parameters: None                                 
+''    Results: Allows the rebel scum to rest the Death Star                 
+''+Reads/Uses: ???                                               
+''    +Writes: A lot of variables in the ".ResetX" functions
+'' Local Vars: None                                  
+''      Calls: All ".ResetX" functions for hardware subsytems
 ''        URL: www.solarsystemexpress.com/death-star-in-leo.html
 
-if (DEBUG_MODE)
-  DEBUG.start(DEBUG_OUTPUT_PIN, DEBUG_INPUT_PIN, 0, DEBUG_BAUD_RATE)
+InitializeDeathStar
 
-TEXT_TO_VOICE.Initialize(TEXT_TO_VOICE#DARTH_VADER, EMIC_RX, EMIC_TX, DEBUG_BAUD_RATE, VOICE_BAUD_RATE, TEXT_TO_VOICE#ESPON)  
-''TO-DO:IMU.Initialize
-''TO-DO:ATTITUDE_CONTROL.Initialize
- 
+PRI UnitTest | BOOT_MODE   'Test the partially operational Death Star
 
+''     Action: Tests all the Death Star hardware and firmware  
+'' Parameters: None                                 
+''    Results: Prepares Death Star to become fully operational                
+''+Reads/Uses: ???                                               
+''    +Writes: ???
+'' Local Vars: BOOT_MODE                                  
+''      Calls: ???
+''        URL: www.deathstarinspace.com
+
+repeat 
+  DEBUG.SendText(STRING("Hello Earthling,", DEBUG#CR))
+  DEBUG.SendText(STRING("Type 2 and hit enter to boot Death Star in planet destruction mode.", DEBUG#CR))
+  DEBUG.SendText(STRING("Type 1 and hit enter to boot Death Star in self destruct mode.", DEBUG#CR))
+  DEBUG.SendText(STRING("Type 0 and hit enter to boot Death Star in test mode.", DEBUG#CR))  
+  TIMING.PauseSec(5)      'Pause 5 seconds 
+until(BOOT_MODE := DEBUG.GetNumber)
+
+DEBUG.start(DEBUG_OUTPUT_PIN, DEBUG_INPUT_PIN, 0, DEBUG_BAUD_RATE)
+
+case BOOT_MODE
+  0: 'Initializes debug mode and infite loop 
+                
+    'Stop 
+  1: 'Initializes infite loop for 
+      
+    'Stop     
+  2: 'Initializes connection to the Parallax Serial Terminal     
+
+    'Stop 
+DAT
+IamYourFather   byte "I am your father Back our Kickstarter today"
+Rey             byte "Daisy Ridley    "                
+Finn            byte "John Boyega     "
+Poe             byte "Oscar Issac     "
+Leia            byte "Carier Fisher   "
+Luke            byte "Mark Hamill     "  
+Han             byte "Harrison Ford   "
+Vader           byte "David Prowse    "
+Kenobi          byte "Ewan McGregor   "
+Ben             byte "Alec Guinness   "  
+Maz             byte "Lupita Nyongo   "
+Windu           byte "Samuel L Jackson"
+Palpatine       byte "Ian McDiarmid   "
+Padme           byte "Natalie Portman "   
+Kylo            byte "Adam Driver     "
+Snoke           byte "Andy Serkis     "
+Hux             byte "Domhnall Gleeson"
+C3PO            byte "Anthony Daniels "
+Yoda            byte "Frank Oz        "
+Tarkin          byte "Peter Cuching   "
+Chewbacca       byte "Peter Hayhew    "
+Dooku           byte "Christopher Lee "
+JarJar          byte "Ahmed Best      "
+QUiGon          byte "Liam Neeson     "
+Anakin          byte "Jake Llyod      "
+Backer0         byte "Blaze Sanders   "
+Backer2187      byte "John Doe        ", 0
+
+
+{{
+PUB FutureWork
+  ''TO-DO:ATTITUDE_CONTROL.Initialize
+  
+  TEXT_TO_VOICE.Initialize(TEXT_TO_VOICE#DARTH_VADER, EMIC_RX, EMIC_TX, DEBUG_BAUD_RATE, VOICE_BAUD_RATE, TEXT_TO_VOICE#ESPON)
+  TEXT_TO_VOICE.SpeekStoredQuote(4)
+  TEXT_TO_VOICE.SpeekStoredQuote(VADER_FAITH_QUOTE)
+  
+  
+  TEXT_TO_VOICE.SpeekStoredQuote(VADER_FATHER_QUOTE)
+
+      
+if(DEBUG#DEBUG_STATE)
+  DEBUG.SendText(STRING("Laser fired! Planet Alderaan was destoryed :(", DEBUG#CR))
+  TEXT_TO_VOICE.SpeekStoredQuote(VADER_DARK_SIDE_QUOTE) 
+
+ TRACKING_CAMERA.ResetCamera 
 'Initialize CMU Camera Settings
 TRACKING_CAMERA.CameraPower(TRUE)
 TRACKING_CAMERA.SetFrameRate(13)    ' = TRACKING_CAMERA.SetRegister(17, 13) Up to 50 FPS possible
@@ -278,53 +365,8 @@ TRACKING_CAMERA.SetTrackingColors(245, 255, 237, 245, 0, 10) ' Track MSPAINT Yel
 'Input to the camera is NOT raw bytes, ACK\r and NCK\r confirmations are NOT suppressed, and Output from the camera is in raw bytes  
 TRACKING_CAMERA.SetRawMode(%001)    
 TRACKING_CAMERA.SetWindow(0, 0, 640, 480) '???
+}}
 
-
-PRI Reset  'Reset all the Death Star hardware  
-
-''     Action: Resets all the Death Star hardware and firmware  
-'' Parameters: None                                 
-''    Results: Allows the rebel scum to rest the Death Star                 
-''+Reads/Uses: ???                                               
-''    +Writes: A lot of variables in the ".ResetX" functions
-'' Local Vars: None                                  
-''      Calls: All ".ResetX" functions for hardware subsytems
-''        URL: www.solarsystemexpress.com/death-star-in-leo.html
-
-TRACKING_CAMERA.ResetCamera
-''TO-DO:IMU.ResetIMU
-
-PRI UnitTest | BOOT_MODE   'Test the partially operational Death Star
-
-''     Action: Tests all the Death Star hardware and firmware  
-'' Parameters: None                                 
-''    Results: Prepares Death Star to become fully operational                
-''+Reads/Uses: ???                                               
-''    +Writes: ???
-'' Local Vars: BOOT_MODE                                  
-''      Calls: ???
-''        URL: www.deathstarinspace.com
-
-repeat 
-  DEBUG.SendText(STRING("Hello Earthling,", DEBUG#CR))
-  DEBUG.SendText(STRING("Type 2 and hit enter to boot Death Star in planet destruction mode.", DEBUG#CR))
-  DEBUG.SendText(STRING("Type 1 and hit enter to boot Death Star in self destruct mode.", DEBUG#CR))
-  DEBUG.SendText(STRING("Type 0 and hit enter to boot Death Star in test mode.", DEBUG#CR))  
-  TIMING.PauseSec(5)      'Pause 5 seconds 
-until(BOOT_MODE := DEBUG.GetNumber)
-
-DEBUG.start(DEBUG_OUTPUT_PIN, DEBUG_INPUT_PIN, 0, DEBUG_BAUD_RATE)
-
-case BOOT_MODE
-  0: 'Initializes debug mode and infite loop 
-                
-    'Stop 
-  1: 'Initializes infite loop for 
-      
-    'Stop     
-  2: 'Initializes connection to the Parallax Serial Terminal     
-
-    'Stop   
 {{
 
 ┌───────────────────────────────────────────────────────────────────────────┐
