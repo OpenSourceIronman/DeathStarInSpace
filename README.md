@@ -1,9 +1,11 @@
 # Death Star in Space
 Lets launch a miniature Death Star into space to celebrate Star Wars: Episode IX
 
-Author: Blaze Sanders Email: blaze.d.a.sanders@gmail.com Skype: blaze.sanders Twitter: @BlazeDSanders
+Author: Blaze Sanders 
+Email: deathstarinspace@gmail.com
+Twitter: @BlazeDSanders
 
-This Git repo is broken down into the following two folders / directories (***PYTHON_Code, SPIN_Code***). The Python_Code directory holds prototype code used to test the system on the ground using a Raspberry Pi 3 B+. The SPIN_Code directory holds the flight code that will be running on a Parallax Propeller 1 microcontroller while the Death Star rides a rocket into space!
+This Git repo is broken down into the following two folders / directories (***PYTHON_Code, SPIN_Code***). The PYTHON_Code directory holds prototype code used to test the system on the ground using a Raspberry Pi 3 B+. The SPIN_Code directory holds the flight code that will be running on a Parallax Propeller 1 microcontroller while the Death Star rides a rocket into space!
 
 ***
 
@@ -29,7 +31,7 @@ To run the code in PYTHON_Code directory complete the following steps:
 
 *** 
 
-We will be launching a $??K crowd funding campaign Dec 20, 2018 to raise funding for the flight hardware.
+We will be launching a $??K crowd funding campaign April 11, 2019 to raise funding for the flight hardware.
 
 Technical Website - www.deathstarinspace.com/engineering
 Planning Google Doc - http://goo.gl/9ftifS
