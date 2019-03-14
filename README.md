@@ -12,11 +12,14 @@ This Git repo is broken down into the following two folders / directories (***PY
 SPIN_Code: 
 
 https://www.parallax.com/product/32810
+https://www.parallax.com/downloads/propelleride-software-windows-spin-pasm-propbasic
 
 To run the code in SPIN_Code directory complete the following steps:
-1. Download and open the Parallax Propeller Tool / IDE.
-2. File > Open (Ctrl+O) the DeathStarDriver.SPIN file
-3. Run > Compile Current > Load EEPROM (F11) to programm EEPROM and start Death Star software running. 
+1. Download and open the Parallax Propeller Tool / IDE (link above).
+2. Select menu item: File > Open (Ctrl+O) the DeathStarDriver.SPIN file
+3. Select menu item: Project > Write (F11) to programm EEPROM and start Death Star software running. 
+
+For faster testing after inital EEPROM write you can use Project > Run (F10) to program volatile RAM.
 
 ***
 
