@@ -41,3 +41,31 @@
 }}
 
 CON 'Global Constants
+
+  MPL3115A2_ADDRESS = 0h60     'Default I2C address 1100000
+
+
+  'MPL3115A2 registers
+
+  MPL3115A2_REGISTER_STATUS = 0h60      
+
+  MPL3115A2_REGISTER_PRESSURE_MSB     =    (0x01),
+  MPL3115A2_REGISTER_PRESSURE_CSB    =     (0x02),
+  MPL3115A2_REGISTER_PRESSURE_LSB    =     (0x03),
+
+  MPL3115A2_REGISTER_TEMP_MSB       =      (0x04),
+  MPL3115A2_REGISTER_TEMP_LSB      =       (0x05),
+
+  MPL3115A2_REGISTER_DR_STATUS     =       (0x06),
+
+  MPL3115A2_OUT_P_DELTA_MSB        =       (0x07),
+  MPL3115A2_OUT_P_DELTA_CSB        =       (0x08),
+  MPL3115A2_OUT_P_DELTA_LSB        =       (0x09),
+
+  MPL3115A2_OUT_T_DELTA_MSB        =       (0x0A),
+  MPL3115A2_OUT_T_DELTA_LSB        =       (0x0B),
+
+  MPL3115A2_WHOAMI            =            (0x0C),
+
+  MPL3115A2_BAR_IN_MSB         =           (0x14),
+  MPL3115A2_BAR_IN_LSB         =           (0x15),
