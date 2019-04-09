@@ -33,10 +33,10 @@ After downloading our full GitHub repo you can run code in PYTHON_Code directory
 
 *** 
 
-We will be launching a $??K crowd funding campaign April 11, 2019 to raise funding for the flight hardware.
+We will be launching a $18,420 Kickstarter campaign April 11, 2019 at 9:32 am PT to raise funding for the flight hardware.
 
-Technical Website - www.deathstarinspace.com/engineering
-Planning Google Doc - http://goo.gl/9ftifS
-Kickstarter - ???
+1. Technical Website - www.deathstarinspace.com/engineering
+2. Planning Google Doc - https://goo.gl/VPZJBm
+3. Kickstarter - https://www.kickstarter.com/projects/solx/1015904087?ref=781870&token=65794c12
 
-FUTURE WORK - Send Death Star in Low Earth Orbit (LEO) or flyby on the Moon and transmit names and photos to distance stars via lasers.
+FUTURE WORK - Send Death Star in Low Earth Orbit (LEO) or flyby of the Moon and transmit names and photos to distance stars via lasers.
