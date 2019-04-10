@@ -71,14 +71,19 @@ CON 'Global Constants
   '----General useful constants---- 
   HIGH = 1
   LOW = 0
-
   OUTPUT = 1
   INPUT = 0
-
-  MECO_ALTITUDE := 100_000 'Main Engine Cut Off in meters
-
+  
+  '----32 bit aerospace constant integers----     
+  MECO_ALTITUDE = 100_000         'Main Engine Cut Off altitude in meters
+  SPACEPORT_AMERICA_PAD_MSL = 10  'Mean Sea Level of launch pad at Spaceport America in New Mexico
+  ATLANTIC_OCEAN_MSL = 0          'Mean Sea Level of Atlantic Ocen off the coast of Florida
+  LAUNCH_ACCELERATION_TRIGGER_LEVEL = 3 'G's = 29.43 m/s^2
+                                         '
   '----Propeller pin configuration for Death Star Mark III----
 
+  REMOVE_BEFORE_FLIGHT_PIN = 2    'Net GPIO1 = P2 on J2
+                                  '
   '--I2C bus pins--
   I2C_SCL = 28
   I2C_SDA = 29
@@ -134,13 +139,13 @@ OBJ 'Additional files you would like imported / included
   TIMING                  : "Clock"
 
   'Used to output debugging statments to the Serial Terminal
-  'Custom PSP file updating http://obex.parallax.com/object/521 
+  'Custom DSiS file to updates http://obex.parallax.com/object/521 
   DEBUG                   : "GDB-SerialMirror"
 
   'Used to control the RGB LED color, frequency and ON duration
   LED                     : "TriColorLED"
 
-  'Used to control the current and thus power flowing through a WSLD-650-180m-1 laser diodes
+  'Used to control the current and thus power flowing through LASER 
   LASER                   : "WSLD-650-180m-1"
 
   'Used to allow student code to run separate from main processing thread
@@ -155,52 +160,66 @@ OBJ 'Additional files you would like imported / included
   'Used to stream video and images between two objects (distance less than ?300? meters)
   WIRELESS_MESH_NETWORK   : "ESP-12E"
 
-''*  FUTURE WORK FOR MARK IV DEATH STAR
-''***********************************************************************************************
-''*  'Used to generate Darth Vader like audio output from text strings
-''*  'TEXT_TO_VOICE           : "EMIC2"
-''*
-''*  'Used to control the current and thus magnnetic field around NSS Magnetorquer Rods 
-''*  'ATTITUDE_CONTROL       : "NCTR-M002-Mag-Rod"
-''*
-''*  'Used to perform color detection, motion detection, and color classification 
-''*  'CV_CAMERA               : "CMUCamera2"
-''*
-''*  'Used to stream video and images between Earth dish and LEO (distance greater then 100 km)
-''*  'WIRELESS_SBAND         : "n2420"
-''***********************************************************************************************
+  ''*  FUTURE WORK FOR MARK IV DEATH STAR
+  ''***********************************************************************************************
+  ''*  'Used to generate Darth Vader like audio output from text strings
+  ''*  'TEXT_TO_VOICE           : "EMIC2"
+  ''*
+  ''*  'Used to control the current and thus magnnetic field around NSS Magnetorquer Rods 
+  ''*  'ATTITUDE_CONTROL       : "NCTR-M002-Mag-Rod"
+  ''*
+  ''*  'Used to perform color detection, motion detection, and color classification   
+  ''*  'CV_CAMERA               : "CMUCamera2"
+  ''*
+  ''*  'Used to stream video and images between Earth dish and LEO (distance greater then 100 km)
+  ''*  'WIRELESS_SBAND         : "n2420"
+  ''***********************************************************************************************
 
-PUB Main | word currentAltitude, byte currentAcceleration 
+PUB Main | currentAltitude, currentAcceleration, isHardwareReady
 
-  ''     Action: Initialize all Death Star hardware and put system into low power mode  
+  ''     Action: Control all Death Star hardware 3 days  before launch, until 30 minutes after launch
   '' Parameters: None                                 
   ''    Results: Puts CPU into low power mode until rocket launch                  
   ''+Reads/Uses: EVERYTHING                                               
   ''    +Writes: EVERYTHING
-  '' Local Vars: currentAltitude, currentAcceleration 
-  ''Local Const: LAUNCH_ACCELERATION                                 
+  '' Local Vars: isHardwareReady, currentAltitude, currentAcceleration 
+  ''Local Const: None                                 
   ''      Calls: EVERYTHING
   ''        URL: https://www.deathstarinspace.com
 
-  byte LAUNCH_ACCELERATION := 3 'G's = 29.43 m/s^2
-
-  InitializeDeathStar
-
-  currentAltitude := ALTIMETER.GetAltitude
-
-  '32 bit integer in units of meters
-  if(currentAltitude > MECO_ALTITUDE)
-  if(currentAcceleration > LAUNCH_ACCELERATION)
-
+  'Initialize hardware in a low power state (RCSLOW) to allow 144 to 168 hour runtime leading up to rocket launch
+  InitializeDeathStar 
+  
+  'Run IMU program in parallel CPU / cog to capture launch accleration event while in RCSLOW low power mode
   cog := cognew(IMU.StartIMU, @IMU_StackPointer)+1
+  
+  'Run STEM program in parallel CPU / cog to allow data collection before, during, and after flight
+  cog := cognew(STEM.Main, @STEM_CodeStackPointer)+1
+  
+  currentAcceleration := 0
+  currentAltitude := ALTIMETER.GetAltitude
+  isHardwareReady := INA[REMOVE_BEFORE_FLIGHT_PIN] 'Pin in = 0 = GND
+  while currentAcceleration < LAUNCH_ACCELERATION_TRIGGER_LEVEL and !isHardwareReady and currentAltitude < SPACEPORT_AMERICA_PAD_MSL
+    'DO NOTHING TO SAVE POWER IN RCSLOW CLOCK MODE
+    TIMING.PauseSec(3600)                               'Pause 1 hour
+    currentAltitude := ALTIMETER.GetAltitude 
+    'TO-DO: Fix stackpointer memory access currentAcceleration := @IMU_StackPointer[1]                    
+    isHardwareReady := INA[REMOVE_BEFORE_FLIGHT_PIN]
+      
+  'Switch to high power draw 80 MHz clock to allow fast proccessing during launch and landing
+  TIMING.SetMode(_clkmode)
+
+  'Run LASER program in parallel CPU / cog
+  LASER.SetLukeSkyWalkersNearDeathStar(false)
+  LASER.SetSelfDestructButton(false)
   cog := cognew(LASER.Start, @LASER_StackPointer)+1
-  cog := cognew(STEM.Start, @STEM_CodeStackPointer)+1
+  
 
-'TODO: ADD CONTROL LOOP HERE!!!
-
+  'TODO: ADD ATTITUDE CONTROL LOOP HERE!!!
+ 
 
   TIMING.PauseSec(10)
-  DEBUG.SendText(STRING("System Rebooting...", DEBUG#CR))
+  DEBUG.SendText(STRING("System Rebooting in two seconds...", DEBUG#CR))
   TIMING.PauseSec(2)
 
   reboot  
@@ -215,9 +234,9 @@ PRI InitializeDeathStar | OK 'Initializes all the Death Star hardware and firmwa
   ''     Action: Initializes all the Death Star hardware and firmware  
   '' Parameters: None                                 
   ''    Results: Prepares the Death Star for planet scale destruction                  
-  ''+Reads/Uses:  Global constants and variables in this DeathStarDriver.spin file                                             
+  ''+Reads/Uses: Global constants and variables in this DeathStarDriver.spin file                                             
   ''    +Writes: A lot of variables in the ".Initialize" functions
-  '' Local Vars: OK - Variable to check if initialization has gone good.                                  
+  '' Local Vars: OK - Variable to check if initialization completed successfully.                                  
   ''      Calls: All ".Initialize" functions for hardware subsytems
   ''        URL: https://www.deathstarinspace.com/engineering
 
@@ -235,10 +254,11 @@ PRI InitializeDeathStar | OK 'Initializes all the Death Star hardware and firmwa
   DEBUG.SendText(STRING("Update *DEBUG_STATE* global variable in GDB-SerialMirror.spin to toggle bevahior.", DEBUG#CR))
    
   ALTIMETER.Initialize
+  LASER.Initialize
   IMU.Initialize
   WIRELESS_MESH_NETWORK.Initialize
-  ''TEXT_TO_VOICE.Initialize(TEXT_TO_VOICE#DARTH_VADER, EMIC_RX, EMIC_TX, DEBUG_BAUD_RATE, VOICE_BAUD_RATE, TEXT_TO_VOICE#ESPON)  
-
+  ''TO-DO: TEXT_TO_VOICE.Initialize(TEXT_TO_VOICE#DARTH_VADER, EMIC_RX, EMIC_TX, DEBUG_BAUD_RATE, VOICE_BAUD_RATE, TEXT_TO_VOICE#ESPON)  
+  ''TO-DO: ATTITUDE_CONTROL.Initialize(???)
 
 PRI Reset  'Reset all the Death Star hardware  
 
@@ -312,65 +332,6 @@ DAT
   Anakin          byte "Jake Llyod      "
   Backer0         byte "Blaze Sanders   "
   Backer2187      byte "John Doe        ", 0
-
-
-{{
-PUB FutureWork
-  ''TO-DO:ATTITUDE_CONTROL.Initialize
-  
-  TEXT_TO_VOICE.Initialize(TEXT_TO_VOICE#DARTH_VADER, EMIC_RX, EMIC_TX, DEBUG_BAUD_RATE, VOICE_BAUD_RATE, TEXT_TO_VOICE#ESPON)
-  TEXT_TO_VOICE.SpeekStoredQuote(4)
-  TEXT_TO_VOICE.SpeekStoredQuote(VADER_FAITH_QUOTE)
-  
-  
-  TEXT_TO_VOICE.SpeekStoredQuote(VADER_FATHER_QUOTE)
-
-      
-if(DEBUG#DEBUG_STATE)
-  DEBUG.SendText(STRING("Laser fired! Planet Alderaan was destoryed :(", DEBUG#CR))
-  TEXT_TO_VOICE.SpeekStoredQuote(VADER_DARK_SIDE_QUOTE) 
-
- TRACKING_CAMERA.ResetCamera 
-'Initialize CMU Camera Settings
-TRACKING_CAMERA.CameraPower(TRUE)
-TRACKING_CAMERA.SetFrameRate(13)    ' = TRACKING_CAMERA.SetRegister(17, 13) Up to 50 FPS possible
-TRACKING_CAMERA.setHiResMode(true) 
-TRACKING_CAMERA.Start(CAMERA_RX_PIN, CAMERA_TX_PIN, CAMERA_BAUD_RATE)
-TRACKING_CAMERA.SetBufferMode(FALSE) 'Non-Continuous Frame Reading / frame stored to memory  
-TRACKING_CAMERA.SetRegister(CONTRAST, 128)     'Value between 0 and 255 inclusive
-TRACKING_CAMERA.SetRegister(BRIGHTNESS, 128)   'Value between 0 and 255 inclusive
-TRACKING_CAMERA.SetRegister(COLOR_MODE, 36)    'YCrCb*  Auto White Balance On
-TRACKING_CAMERA.SetRegister(AUTO_EXPOSURE, 33) 'Auto Gain On
-TRACKING_CAMERA.SetDelayMode(10)               'Delay Between Characters on Serial Port 0..255 
-TRACKING_CAMERA.SetDownSampleFactors(2, 2)      'Down Sampling Factors
-TRACKING_CAMERA.SetLED0Mode(AUTO)              'LED control
-TRACKING_CAMERA.SetLED1Mode(AUTO)              'LED control
-TRACKING_CAMERA.SetNoiseFilter(10)             '???    SetFrameDifferencingChannel
-TRACKING_CAMERA.SetHiResFrameDifferencing(true)'HiRes Frame Differencing 
-'TRACKING_CAMERA.SetFrameDifferencingChannel(RED)  '??? Set Frame Differencing Channel (0=Red, 1=Green, 2=Blue)
-'TRACKING_CAMERA.SetFrameDifferencingChannel(GREEN)'??? Set Frame Differencing Channel (0=Red, 1=Green, 2=Blue)
-'TRACKING_CAMERA.SetFrameDifferencingChannel(BLUE) '??? Set Frame Differencing Channel (0=Red, 1=Green, 2=Blue)
-'TRACKING_CAMERA.SetLineMode                       '???
-'TRACKING_CAMERA.SetOutputMask                     '???
-TRACKING_CAMERA.SetPixelDifferenceMode(true)       'Set Noise Filter threshold   
-TRACKING_CAMERA.SetPacketFilteringMode(true)      'Set Noise Filter threshold   
-'TRACKING_CAMERA.SetPollMode(false)                '??? 
-TRACKING_CAMERA.SetPacketSkipping(false)           '???
-TRACKING_CAMERA.SetPollMode(true)                  '??? 
-TRACKING_CAMERA.SetTrackInverted(false)           'Track Inverted Mode (0 or 1) 
-                                                    
-TRACKING_CAMERA.SetServoMask(%0000)     'Pan and Tilt control and report is disabled
-TRACKING_CAMERA.SetServoLevel(1, LOW)  'Pan Servo LOW / OFF
-TRACKING_CAMERA.SetServoLevel(2, LOW)  'Tilt Servo LOW / OFF
-TRACKING_CAMERA.SetServoParameters(PAN_START, PAN_END, PAN_STEP, TILT_START, TILT_END, TILT_STEP) '???
-
-'TRACKING_CAMERA.TrackingColors(245, 255, 237, 245, 0, 10) ' Track MSPAINT Yellow ??? 
-TRACKING_CAMERA.SetTrackingColors(245, 255, 237, 245, 0, 10) ' Track MSPAINT Yellow 
-'Input to the camera is NOT raw bytes, ACK\r and NCK\r confirmations are NOT suppressed, and Output from the camera is in raw bytes  
-TRACKING_CAMERA.SetRawMode(%001)    
-TRACKING_CAMERA.SetWindow(0, 0, 640, 480) '???
-}}
-
 {{
 
 ┌───────────────────────────────────────────────────────────────────────────┐

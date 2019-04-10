@@ -34,7 +34,7 @@
 
 CON 'Global Constants
 
-  STAY_ON = 4,294,967,295  'Max unsigned 32 bit value
+  STAY_ON = 4_294_967_295  'Max unsigned 32 bit value
   OFF = 0
   ON = 1
   LIGTHSABER_FREQ = 776    'Units of Hz
@@ -77,20 +77,20 @@ PUB TurnOnLED(color, duration, flashingFreq) | mSecEslapsed
 
   mSecEslapsed := 0
   if duration == STAY_ON
-    OUT[color] = ON
-    return
-  else 
-    while mSecEslapsed <= duration - mSecEslapsed 
-      OUTA[color] = ON
+    OUTA[color] := ON
+  else  
+    repeat while (mSecEslapsed <= duration - mSecEslapsed) 
+      OUTA[color] := ON
       TIMING.PauseMSec(1/(flashingFreq* 1_000)/2)  'TODO: Add duty cycle ON percentage 
-      OUTA[color] = OFF
+      OUTA[color] := OFF
       TIMING.PauseMSec(1/(flashingFreq* 1_000)/2)  'TODO: Add duty cycle OFF percentage 
       mSecEslapsed += 1/flashingFreq
     
-    TurnOffLED()'A specified duration of time has passed (i.e. NOT STAY ON)
-    return
+    TurnOffLED 'A specified duration of time has passed (i.e. NOT STAY ON)
+  
+  return
     
-PUB TurnOffLED() 
+PUB TurnOffLED 
 
   ''     Action: Control output status of RGB LED 
   '' Parameters: None
@@ -100,26 +100,26 @@ PUB TurnOffLED()
   ''      Calls: Nothing
   ''        URL: www.deathstarinspace.com/blog/SMLP36RGB2W3
 
-  OUTA[RED] = OFF
-  OUTA[GREEN] = OFF
-  OUTA[BLUE] = OFF
+  OUTA[RED] := OFF
+  OUTA[GREEN] := OFF
+  OUTA[BLUE] := OFF
 
  
-PUB UnitTest() 'Test the control of RGB LED and sequencing of seven differnet colors
+PUB UnitTest 'Test the control of RGB LED and sequencing of seven differnet colors
   
   'Test lower limit of human eye frame rate with 10 Hz flashing
   TurnOnLED(RED, 5, 10) 
   TurnOnLED(RED, 5, LIGTHSABER_FREQ)
-  TurnOffLED()
+  TurnOffLED
   
   TurnOnLED(GREEN, STAY_ON, 30)
   TIMING.PauseSec(5) 
-  TurnOffLED()
+  TurnOffLED
   
   TurnOnLED(BLUE, 2, 30)
   TIMING.PauseSec(5) 
   TurnOnLED(WHITE, 3, 60)
-  TurnOffLED()
+  TurnOffLED
   
   TurnOnLED(PURPLE, 3, 60)
   TurnOnLED(CYAN, 3, 60)

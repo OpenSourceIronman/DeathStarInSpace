@@ -97,6 +97,9 @@ CON
 
 
   DEBUG_STATE = true
+  DEBUG_OUTPUT_PIN = 31     'Only usable as GPIO when Prop Plug is NOT plugged in
+  DEBUG_INPUT_PIN = 30      'Only usable as GPIO when Prop Plug is NOT plugged in
+  DEBUG_BAUD_RATE = 1000000 'Make sure this matches Parallax Serial Terminal setting
   I2C_SCL  = 28
   I2C_SDA  = 29
   

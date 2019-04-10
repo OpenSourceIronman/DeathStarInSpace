@@ -63,39 +63,35 @@ OBJ 'Additional files you would like imported / included
   EEPROM        : "Basic_I2C_Driver"
 
 PUB Main
-  
-  TIMING.Init(_xinfreq)         'External cyrstal hardware in 5 MHz, defined in "CON" section above
-  TIMING.SetMode(XTAL1_PLL1X)   'Set clock to 5 MHz to reduce power draw at boot up and during operations
-  
+   
   EEPROM.Initialize(DEBUG#I2C_SCL)
   EEPROM.Start(DEBUG#I2C_SCL)
-  
-  DEBUG.start(DEBUG_OUTPUT_PIN, DEBUG_INPUT_PIN, 0, DEBUG_BAUD_RATE) 'Initialize the Parallax Serial Terminal                      
+  DEBUG.start(DEBUG#DEBUG_OUTPUT_PIN, DEBUG#DEBUG_INPUT_PIN, 0, DEBUG#DEBUG_BAUD_RATE) 'Initialize the Parallax Serial Terminal                      
   TIMING.PauseSec(1) 'Give software terminal and hardware pins time to stablize their connection
   
-  isDataSaving = False             'No data will be stored in memory (printing to Serial Terminal instead)
+  isDataSaving := False             'No data will be stored in memory (printing to Serial Terminal instead)
                                                                      
-  LEDexampleFunction()                       'Run LEDexampleProgram code below
+  LEDexampleFunction                       'Run LEDexampleProgram code below
   AltimeterExampleFunction(isDataSaving)   'Run AltimeterExampleProgram code below
   
   'INSERT YOUR CODE BELOW: Either replace next line with name of your code OR write your code in StudentProgram1()
-  StudentFunction1()                         
+  StudentFunction1                         
 
   'Clean up internal memory by stopping EEPROM and DEBUG code from running
   EEPROM.Stop(DEBUG#I2C_SCL)
-  DEBUG.stop()
+  DEBUG.stop
   'END OF STEM-Code.spin PROGRAM. ALL FUNCTIONS BELOW HERE MUST BE CALLED TO BE USED
 
-PRI StudentFunction1()
+PRI StudentFunction1
   'WRITE YOUR CODE HERE
 
-PRI StudentFunction2()
+PRI StudentFunction2
   'WRITE YOUR CODE HERE
   
-PRI StudentFunctionN()
+PRI StudentFunctionN
   'WRITE YOUR CODE HERE
 
-PRI LEDexampleFunction() 
+PRI LEDexampleFunction | ontime
 
   ''     Action: Prints Star Wars quotes on the debug terminal and turns on correct color lightsaber  
   '' Parameters: None                                 
@@ -118,7 +114,7 @@ PRI LEDexampleFunction()
 
   LED.TurnOnLED(LED#GREEN, LED#STAY_ON, LED#LIGTHSABER_FREQ)                'Turn on green LED flashing at 772 Hz
   TIMING.PauseSec(3)                                                        'Pause 3 seconds for dramatic effect
-  LED.TurnOffLED()                                                          'Turn off green LED 
+  LED.TurnOffLED                                                          'Turn off green LED 
   DEBUG.SendText(STRING("I am a Jedi like my father before me!", DEBUG#CR)) 'Luke Skywalker
   TIMING.PauseSec(2)                                                        'Pause 2 seconds before next event
 
@@ -137,7 +133,7 @@ PRI LEDexampleFunction()
   TIMING.PauseSec(4)                                        'Pause 4 seconds before ending example program
                    
 
-PRI AltimeterExampleFunction(storeDataToMemory) 
+PRI AltimeterExampleFunction(storeDataToMemory) | SecEslapsed
 
   ''     Action: Collect temperature, pressure, and altitude data from Death Star sensors  
   '' Parameters: storeDataToMemory - Boolean variable to configure how data is stored / displayed                                 
@@ -150,7 +146,7 @@ PRI AltimeterExampleFunction(storeDataToMemory)
   ''        URL: https://www.deathstarinspace.com/blog/MPL3115A2
   
   SecEslapsed := 0
-  while (SecEslapsed <= duration - SecEslapsed || SecEslapsed < ALTIMETER#MAX_DATA_COLLECTION_DURATION)
+  while SecEslapsed <= duration - SecEslapsed and SecEslapsed < ALTIMETER#MAX_DATA_COLLECTION_DURATION 
     temp := ALTIMETER.GetTemperature(C)
     pres := ALTIMETER.GetPressure(B)
     alt  := ALTIMETER.GetAltitude(M)  'Program calcultes altitude use temp and pres variables
@@ -174,14 +170,13 @@ PRI AltimeterExampleFunction(storeDataToMemory)
       DEBUG.SendText(STRING(" bar of pressure", DEBUG#CR))
       DEBUG.Dec(alt)                                        'Print decimal altitude value with units to terminal window
       DEBUG.SendText(STRING(" meters in altitude", DEBUG#CR))
-  
+      
       TIMING.PauseMSec(900)      'Pause 900 microsecond to give to account for time sensors readings take
    
-   '***
+    '***
    
-     SecEslapsed += 1
-     
-     
+    SecEslapsed += 1
+    
   'THIS IS END OF WHILE LOOP
   
   'Write data store in 180 element array to EEPROM before exiting AltimeterExampleFunction()
