@@ -95,13 +95,12 @@ CON
   CRSRY    =   15                            ''CRSRY    =   15         
   CLS      =   16                            ''CLS      =   16          
 
-
-  DEBUG_STATE = true
+  DEBUG_STATE = false
   DEBUG_OUTPUT_PIN = 31     'Only usable as GPIO when Prop Plug is NOT plugged in
   DEBUG_INPUT_PIN = 30      'Only usable as GPIO when Prop Plug is NOT plugged in
   DEBUG_BAUD_RATE = 1000000 'Make sure this matches Parallax Serial Terminal setting
   I2C_SCL  = 28
-  I2C_SDA  = 29
+  I2C_SDA  = 29  
   
 DAT
   cog         long  0               'cog flag/id

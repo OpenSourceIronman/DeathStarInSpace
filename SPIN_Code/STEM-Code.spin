@@ -10,7 +10,7 @@
 ''*  Brief Description:                                                             *
 ''*  Number of cogs/CPU's used: 1 out of 8                                          *
 ''*                                                                                 *
-''*                                                                                 *                                                                           
+''*  TODO www.tinyurl.com/DSiS-Podcast ???                                                                              *                                                                           
 ''*                                                                                 *
 ''*  Revisions:                                                                     *
 ''*  - Mark I   (Dec 24, 2018): Initial release                                     * 
@@ -63,7 +63,9 @@ OBJ 'Additional files you would like imported / included
   EEPROM        : "Basic_I2C_Driver"
 
 PUB Main
-   
+  
+  DEBUG_MODE := DEBUG#DEBUG_STATE 
+  
   EEPROM.Initialize(DEBUG#I2C_SCL)
   EEPROM.Start(DEBUG#I2C_SCL)
   DEBUG.start(DEBUG#DEBUG_OUTPUT_PIN, DEBUG#DEBUG_INPUT_PIN, 0, DEBUG#DEBUG_BAUD_RATE) 'Initialize the Parallax Serial Terminal                      
@@ -133,36 +135,41 @@ PRI LEDexampleFunction | ontime
   TIMING.PauseSec(4)                                        'Pause 4 seconds before ending example program
                    
 
-PRI AltimeterExampleFunction(storeDataToMemory) | SecEslapsed
+PRI AltimeterExampleFunction(storeDataToMemory) | secEslapsed, temp, pres, alt, memoryLocation, i, duration
 
   ''     Action: Collect temperature, pressure, and altitude data from Death Star sensors  
   '' Parameters: storeDataToMemory - Boolean variable to configure how data is stored / displayed                                 
   ''    Results: Stores data to 246K EEPROM or Prints data to Parallax Serial Terminal                 
   ''Readds/Uses: MAX_DATA_COLLECTION_DURATION constant from the MPL3115A2.spin object                                               
   ''     Writes: To experimentData{} array if storeDataToMemory parameter EQUALS true
-  '' Local Vars: SecEslapsed
+  '' Local Vars: secEslapsed - Timing and array index variable used to populate experimentData[] in RAM
+  ''             temp - Temporary tempoerature variable
+  ''             pres - Temporary pressure variable
+  ''             alt - Temporary altitude variable
+  ''             memoryLocation - Array index variable used to populate experimentData[]
+  ''             i - Loop variable to transfer data from RAM into non-volatile EEPROM 
   ''Local Const: None                                 
   ''      Calls: Functions like ALTIMETER.CalculateAltitude(unitOfMeasure)
   ''        URL: https://www.deathstarinspace.com/blog/MPL3115A2
   
-  SecEslapsed := 0
-  while SecEslapsed <= duration - SecEslapsed and SecEslapsed < ALTIMETER#MAX_DATA_COLLECTION_DURATION 
-    temp := ALTIMETER.GetTemperature(C)
-    pres := ALTIMETER.GetPressure(B)
-    alt  := ALTIMETER.GetAltitude(M)  'Program calcultes altitude use temp and pres variables
+  'TODO: UNCOMMENT word experimentData[180] 'ALTIMETER#MAX_DATA_COLLECTION_DURATION]
+  secEslapsed := 0
+  repeat while SecEslapsed <= duration - SecEslapsed and SecEslapsed < ALTIMETER#MAX_DATA_COLLECTION_DURATION 
+    temp := ALTIMETER.GetTemperature("C")
+    pres := ALTIMETER.GetPressure("B")
+    alt  := ALTIMETER.CalculateAltitude("M")  'Program calcultes altitude use temp and pres variables
     
     '*** You will have the most fun if you only edit the code between the *** markers :)
     
-    if storeDataToMemory == True
-      
-      DEBUG#DEBUG_STATE := False 'Don't print data to terminal window, instead save to EEPROM (memory)
-      memoryLocation := 3*SecEslapsed
+    if storeDataToMemory == true
+      DEBUG_MODE := false 'Don't print data to terminal window, instead save to EEPROM (memory)
+      memoryLocation := 3*secEslapsed
       experimentData[memoryLocation] :=  temp
       experimentData[memoryLocation+1] := pres 
       experimentData[memoryLocation+2] := alt                        '
   
     else
-      DEBUG#DEBUG_STATE := True
+      DEBUG_MODE := true
       DEBUG.SendText(STRING("Debug statements in Parallax Serial Terminal are enabled.", DEBUG#CR))
       DEBUG.Dec(temp)                                       'Print decimal temperature value with units to terminal window
       DEBUG.SendText(STRING(" degrees Celsius", DEBUG#CR))
@@ -175,7 +182,7 @@ PRI AltimeterExampleFunction(storeDataToMemory) | SecEslapsed
    
     '***
    
-    SecEslapsed += 1
+    secEslapsed += 1
     
   'THIS IS END OF WHILE LOOP
   

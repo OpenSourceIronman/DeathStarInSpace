@@ -30,8 +30,8 @@
 ''*                                                                                 *
 ''*  YEI 3-Space Max Power Draw: 5 V @ 60 mA  = 0.3 W                               *
 ''*                                                                                 *             
-''*  YEI 3-Space datasheets can be found at:                                        *
-''*  yeitechnology.com/sites/default/files/YEI_TSS_Users_Manual_3.0_r1_4Nov2014.pdf *
+''*  MPL3115A2 datasheets can be found at:                                        *
+''*  https://www.deathstarinspace.com/blog/MPL3115A2 *
 ''*                                                                                 *  
 ''*  Based off the ??? by ??? of ????                                               *
 ''*  www.                                                                           *
@@ -42,11 +42,14 @@
 
 CON 'Global Constants
 
+  MAX_DATA_COLLECTION_DURATION = 180 ' 180 data points
+  
   MPL3115A2_ADDRESS = $60     'Default I2C address 1100000
 
 
   'MPL3115A2 registers
-
+  MAX_NUM_OF_COMBINED_REGISTERS = 3
+  
   MPL3115A2_REGISTER_STATUS = $60      
 
   MPL3115A2_REGISTER_PRESSURE_MSB = $01
@@ -71,5 +74,56 @@ CON 'Global Constants
   MPL3115A2_BAR_IN_LSB            =  $15
   
 OBJ 'Additional files you would like imported / included   
+ 
+  'Used to read and write data from the onboard 256KB EEPROM.
+  I2C        : "Basic_I2C_Driver"
+  'I2C        : "AD7706-2wire-fast"
+  
+  'Used to output debugging statments to the Serial Terminal
+  'Custom PSP file updating http://obex.parallax.com/object/521 
+  DEBUG         : "GDB-SerialMirror"
+  
+PUB Initialize
 
-PUB Main
+
+PUB GetTemperature(tempUnits) : temp  | rawData
+
+  ''     Action: Get temperature as measured from inside Death Star on white core PCB  
+  '' Parameters: tempUnits - Char variable to select which temperature units function will return                                 
+  ''    Results: Uses I2C to get temperature information from MPL3115A2 IC                  
+  ''Readds/Uses: TODO: MAX_DATA_COLLECTION_DURATION constant from the MPL3115A2.spin object                                               
+  ''     Writes: To experimentData{} array if storeDataToMemory parameter EQUALS true
+  '' Local Vars: rawData - Raw data read from MPL3115A2 register(s)
+  ''Local Const: None                                 
+  ''      Calls: ReadRegister(registerAddressMSB, numOfRegisters)
+  ''        URL: https://www.deathstarinspace.com/blog/MPL3115A2
+
+  case tempUnits
+    "C": 'User selected degrees celsius 
+    "c":
+      rawData := ReadRegister(MPL3115A2_REGISTER_TEMP_MSB, 2)
+      temp := rawData * 3  
+    "F": 'User selected degrees fahrenheit
+    "f": 
+      'Stop     
+    "K": 'User selected kelvin     
+    "k":
+      'Stop   
+  
+  return temp
+  
+PUB GetPressure(pressureUnits): pres
+  'TODO DONT REPEAT CASE CODE ABOVE C, F, K, A, B, P, F, M
+  return pres
+  
+PUB CalculateAltitude(altitudeUnits) : alt
+
+  return alt
+  
+PRI ReadRegister(registerAddressMSB, numOfRegisters) | data[MAX_NUM_OF_COMBINED_REGISTERS], offset 
+  
+  repeat offset from 0 to (numOfRegisters - 1)
+    data[offset] := I2C.Write(DEBUG#I2C_SCL, (registerAddressMSB + offset))
+  
+PRI WiteRegister(registerAddress)  
+

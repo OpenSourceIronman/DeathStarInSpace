@@ -115,7 +115,7 @@ PUB Start
     goodFire := Fire(100, 2)
 }}
 
-PRI Initialize 'Initializes all the laser diodes
+PUB Initialize 'Initializes all the laser diodes
 
   selfDestruct := false
   lukeSkyWalker := false    

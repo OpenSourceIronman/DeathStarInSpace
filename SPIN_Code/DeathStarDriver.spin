@@ -12,7 +12,7 @@
 ''*  This code controls the open source hardware of the Death Star is Space project  *
 ''*  creating a high level API for the control of the following pieces of hardware:  *
 ''*  1) One CMU5 Camera - VGA resolution (640x480) at 13 fps (2 COGS)                *    
-''*  2) One WSLD-650-180m-1 laser diodes - 650 nm, 180 mW and upto 2.5 Gbps          *
+''*  2) One WSLD-650-180m-1 LASER diode - 650 nm, 180 mW and upto 2.5 Gbps           *
 ''*  3) Three NCTR-M002 Magnetorquer Rods - Magnetic moment> 0.2 Am^2 at 200mW & 5V  *
 ''*  4) One ESP-12S wireless transceiver - 2.4 GHz @ distances up to ?300? meters    *
 ''*  5) Thirty solar panels - Recharging at 9V and 2500 mA & laser detection sensor  *
@@ -25,9 +25,10 @@
 ''*  www.deathstarinspace.com/engneering                                             *                                        
 ''*                                                                                  * 
 ''*  Revisions:                                                                      *
-''*  - Mark I  (March 15, 2015): Initial release                                     *
-''*  - Mark II (August 1, 2016): Documentation update and questions marks added      *
+''*  - Mark I   (March 15, 2015): Initial release                                    *
+''*  - Mark II  (August 1, 2016): Documentation update and questions marks added     *
 ''*  - Mark III (November 12, 2018): Implemented all 2018 MDR code requirements      * 
+''*  - Mark IV  (April 10, 2019): Kickstarter update to fix major compiler errors :) *
 ''************************************************************************************                                                        
 }}
 VAR 'Global variables  
@@ -74,31 +75,33 @@ CON 'Global Constants
   OUTPUT = 1
   INPUT = 0
   
-  '----32 bit aerospace constant integers----     
+  '----Aerospace constants----     
   MECO_ALTITUDE = 100_000         'Main Engine Cut Off altitude in meters
   SPACEPORT_AMERICA_PAD_MSL = 10  'Mean Sea Level of launch pad at Spaceport America in New Mexico
   ATLANTIC_OCEAN_MSL = 0          'Mean Sea Level of Atlantic Ocen off the coast of Florida
   LAUNCH_ACCELERATION_TRIGGER_LEVEL = 3 'G's = 29.43 m/s^2
-                                         '
-  '----Propeller pin configuration for Death Star Mark III----
+                                         
+  '---LASER constants---
+  FULL_POWER = 100
+  HALF_POWER = 50
+  
+  '--EMIC 2 hardware pins and constants--
+  EMIC_TX        = 0             ' Serial output (connects to Emic 2 SIN)
+  EMIC_RX        = 1             ' Serial input (connects to Emic 2 SOUT)
+  VOICE_BAUD_RATE = 9600         ' 9600 bits per second (BPS)
+
+  '----Propeller pin configuration for Death Star Mark IV----
 
   REMOVE_BEFORE_FLIGHT_PIN = 2    'Net GPIO1 = P2 on J2
                                   '
   '--I2C bus pins--
   I2C_SCL = 28
   I2C_SDA = 29
-
-
-  '--Laser hardware pins and constants--
-  FULL_POWER = 100
-  HALF_POWER = 50
-
-
+  
   '--Magnetorquer rod hardware pins and constants--
   NEGATIVE = -1
   POSITIVE = 1
   TARGETING_SLACK = 4
-
 
   '--CMU Camera hardware pins and constants--
   CAMERA_RX_PIN = 8
@@ -115,13 +118,6 @@ CON 'Global Constants
   TILT_END = 239
   PAN_STEP = 16
   TILT_STEP = 16
-
-
-  '--EMIC 2 hardware pins and constants--
-  EMIC_TX        = 0             ' Serial output (connects to Emic 2 SIN)
-  EMIC_RX        = 1             ' Serial input (connects to Emic 2 SOUT)
-  VOICE_BAUD_RATE = 9600         ' 9600 bits per second (BPS)
-
 
   '--Program debugging pins and constants--
   SURFACE_SERIAL_BUS = 31   'Only usable as GPIO when Prop Plug is NOT plugged in  
@@ -191,18 +187,18 @@ PUB Main | currentAltitude, currentAcceleration, isHardwareReady
   InitializeDeathStar 
   
   'Run IMU program in parallel CPU / cog to capture launch accleration event while in RCSLOW low power mode
-  cog := cognew(IMU.StartIMU, @IMU_StackPointer)+1
+  'cog := cognew(IMU.StartIMU, @IMU_StackPointer)  
   
   'Run STEM program in parallel CPU / cog to allow data collection before, during, and after flight
-  cog := cognew(STEM.Main, @STEM_CodeStackPointer)+1
+  'TODO: UNCOMMENT cogID := cognew(STEM.Main, @STEM_CodeStackPointer)+1
   
   currentAcceleration := 0
-  currentAltitude := ALTIMETER.GetAltitude
+  currentAltitude := ALTIMETER.CalculateAltitude("M")
   isHardwareReady := INA[REMOVE_BEFORE_FLIGHT_PIN] 'Pin in = 0 = GND
-  while currentAcceleration < LAUNCH_ACCELERATION_TRIGGER_LEVEL and !isHardwareReady and currentAltitude < SPACEPORT_AMERICA_PAD_MSL
+  repeat while currentAcceleration < LAUNCH_ACCELERATION_TRIGGER_LEVEL and !isHardwareReady and currentAltitude < SPACEPORT_AMERICA_PAD_MSL
     'DO NOTHING TO SAVE POWER IN RCSLOW CLOCK MODE
     TIMING.PauseSec(3600)                               'Pause 1 hour
-    currentAltitude := ALTIMETER.GetAltitude 
+    currentAltitude := ALTIMETER.CalculateAltitude("M") 
     'TO-DO: Fix stackpointer memory access currentAcceleration := @IMU_StackPointer[1]                    
     isHardwareReady := INA[REMOVE_BEFORE_FLIGHT_PIN]
       
