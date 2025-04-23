@@ -1,5 +1,5 @@
 # Death Star in Space
-Lets launch a miniature Death Star into space to celebrate Star Wars: Episode IX
+Lets launch a miniature Death Star into space to celebrate Star Wars: Episode X
 
 Using a 5.5 meter Blackstar Orbital Space Drone (previously a United Frontiers Discovery rocket), we will be launching a 10 centimeter diameter spherical space station to 110 km, which is above the Kármán line - the official definition of outer space. At the core of the space station will be 50 Kickstarter backer names etched & gold plated onto a Jedi blue, Ahsoka Tano white, or Sith red colored printed circuit board. Each of these Earthling backers will receive their name as a space flown souvenir after the mission. Up to 2000 additional names will also be stored on a memory chip headed to space. After a zero-G free fall of 5 minutes and a parachute landing, one backer will receive a fully operational space station that has been to space and traveled at over 2400 m/s (5370 miles per hour)!  
 
